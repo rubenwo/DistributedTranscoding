@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+option go_package = "pkg/api/v1";
+
+message Empty {
+}
+
+message ClusterClientOffer {
+    int64 max_concurrent_jobs = 1;
+}
+
+enum VideoCodec {
+    Libx264 = 0;
+    Libx265 = 1;
+    Vpx = 2;
+    Vp8 = 3;
+    Vp9 = 4;
+}
+
+enum AudioCodec {
+    Aac = 0;
+    Ac3 = 1;
+    Opus = 2;
+}
+
+enum MediaFileType {
+    Mp4 = 0;
+    Mkv = 1;
+    Webm = 2;
+}
+
+message VideoSettings {
+    VideoCodec codec = 1;
+}
+
+message AudioSettings {
+    AudioCodec codec = 2;
+}
+
+message TranscodingSettings {
+    VideoSettings video_settings = 1;
+    AudioSettings audio_settings = 2;
+    MediaFileType media_file_type = 3;
+}
+
+message Job {
+    string id = 1;
+    int64 reference_number = 2;
+    TranscodingSettings transcoding_settings = 3;
+    string input_file_name = 4;
+    bytes input_file_data = 5;
+}
+
+enum UploadStatusCode {
+    Unknown = 0;
+    Ok = 1;
+    Failed = 2;
+}
+
+message Result {
+    string job_id = 1;
+    int64 job_reference_number = 2;
+    UploadStatusCode status_code = 3;
+    bytes output_file_data = 4;
+}
+
+service DistributorService {
+    rpc JoinCluster (ClusterClientOffer) returns (stream Job) {
+    }
+
+    rpc UploadResult (Result) returns (Empty) {
+    }
+}
