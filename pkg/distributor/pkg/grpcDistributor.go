@@ -3,10 +3,12 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	v1 "github.com/rubenwo/DistributedTranscoding/pkg/api/v1"
 	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/registry"
+	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/splitter"
+	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 )
 
@@ -26,27 +28,35 @@ func (d *GrpcDistributor) JobIds() []int {
 }
 func (d *GrpcDistributor) AddTranscodeJob(path string) error {
 	// TODO: use registry
-	data, err := os.ReadFile(path)
+	filePaths, err := splitter.SplitVideoTempDir(path)
 	if err != nil {
-		return fmt.Errorf("couldn't read ")
+		return err
 	}
-	split := strings.Split(path, "/")
+	for i, filePath := range filePaths {
+		data, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 
-	job := &v1.Job{
-		Id:              "Some job id",
-		ReferenceNumber: 0,
-		TranscodingSettings: &v1.TranscodingSettings{
-			VideoSettings: &v1.VideoSettings{
-				Codec: v1.VideoCodec_Libx264,
+		split := strings.Split(filePath, "/")
+		fmt.Println(split)
+		job := &v1.Job{
+			Id:              uuid.New().String(),
+			ReferenceNumber: int64(i),
+			TranscodingSettings: &v1.TranscodingSettings{
+				VideoSettings: &v1.VideoSettings{
+					Codec: v1.VideoCodec_Libx264,
+				},
+				AudioSettings: &v1.AudioSettings{},
+				MediaFileType: v1.MediaFileType_Mp4,
 			},
-			AudioSettings: &v1.AudioSettings{},
-			MediaFileType: v1.MediaFileType_Mp4,
-		},
-		InputFileName: split[len(split)-1],
-		InputFileData: data,
-	}
+			InputFileName: split[len(split)-1],
+			InputFileData: data,
+		}
 
-	d.Registry.Jobs <- job
+		d.Registry.Jobs <- job
+	}
 	return nil
 }
 

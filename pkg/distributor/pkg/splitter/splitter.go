@@ -2,10 +2,12 @@ package splitter
 
 import (
 	"errors"
+	"fmt"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -41,12 +43,15 @@ func SplitVideoTempDir(inFileName string) ([]string, error) {
 
 	root := path
 	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		files = append(files, path)
+		if info.IsDir() {
+			return nil
+		}
+		files = append(files, strings.ReplaceAll(path, "\\", "/"))
 		return nil
 	})
 	if err != nil {
 		return nil, ErrCouldNotWalkOutputDirectory
 	}
-
+	fmt.Println(files)
 	return files, nil
 }
