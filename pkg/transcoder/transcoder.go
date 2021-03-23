@@ -66,6 +66,7 @@ func (c *Client) JoinCluster(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			log.Println("Context is done")
 			return nil
 		default:
 			job, err := clusterClient.Recv()
@@ -95,8 +96,10 @@ func (c *Client) uploadResult(ctx context.Context) error {
 	client := v1.NewDistributorServiceClient(conn)
 
 	for res := range c.results {
-		_, err := client.UploadResult(ctx, res)
+		log.Println("Job done, returning result")
+		_, err := client.UploadResult(ctx, res, grpc.MaxCallSendMsgSize(4294967296), grpc.MaxCallRecvMsgSize(4294967296))
 		if err != nil {
+			log.Println(err)
 			return ErrCouldNotUploadResult
 		}
 	}
@@ -231,7 +234,6 @@ func (c *Client) processJobs() {
 			continue
 		}
 		outFile.Close()
-		log.Println("Job done, returning result")
 		c.results <- &v1.Result{
 			JobId:              job.Id,
 			JobReferenceNumber: job.ReferenceNumber,
