@@ -7,7 +7,9 @@ import (
 	v1 "github.com/rubenwo/DistributedTranscoding/pkg/api/v1"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 	"io"
 	"log"
 	"os"
@@ -26,15 +28,21 @@ type Client struct {
 }
 
 func NewClient(serverAddr string, maxConcurrentJobs int64) *Client {
+	dir, err := os.MkdirTemp("", "TranscoderTempDir")
+	if err != nil {
+		log.Fatal(err)
+	}
 	client := &Client{
 		ServerAddr:        serverAddr,
 		MaxConcurrentJobs: maxConcurrentJobs,
-		tempDir:           "./assets",
+		tempDir:           dir,
 		jobs:              make(chan *v1.Job),
 		results:           make(chan *v1.Result),
 	}
 
-	go client.processJobs()
+	for i := 0; i < int(maxConcurrentJobs); i++ {
+		go client.processJobs()
+	}
 	go client.uploadResult(context.TODO())
 
 	return client
@@ -72,6 +80,15 @@ func (c *Client) JoinCluster(ctx context.Context) error {
 			job, err := clusterClient.Recv()
 			if err == nil {
 				c.jobs <- job
+			} else {
+				code, ok := status.FromError(err)
+				if !ok {
+					log.Println(err)
+				}
+				switch code.Code() {
+				case codes.Unavailable:
+					return nil
+				}
 			}
 		}
 	}

@@ -71,3 +71,34 @@ service DistributorService {
     rpc UploadResult (Result) returns (Empty) {
     }
 }
+
+message TranscodeRequest {
+    string input_file_name = 4;
+    bytes input_file_data = 5;
+    TranscodingSettings transcoding_settings = 3;
+}
+
+message TranscodeResponse {
+    string uuid = 1;
+    UploadStatusCode status_code = 2;
+}
+
+message ProgressRequest {
+    string uuid = 1;
+}
+
+enum ProgressState {
+    Distributing = 0;
+    Transcoding = 1;
+}
+message ProgressResponse {
+    ProgressState state = 1;
+    float progress = 2;
+}
+
+service CliService {
+    rpc Transcode (TranscodeRequest) returns (TranscodeResponse) {
+    }
+    rpc Progress (ProgressRequest) returns (stream ProgressResponse) {
+    }
+}

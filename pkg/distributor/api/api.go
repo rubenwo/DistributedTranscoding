@@ -59,6 +59,8 @@ func Run(cfg *config.Configuration) error {
 
 	router.Get("/ws/jobs/status", a.streamJobStatus)
 
+	router.Get("/results/{id}", a.result)
+
 	log.Printf("Distributor is listening on: %s\n", cfg.Addr)
 	if err := http.ListenAndServe(cfg.Addr, router); err != nil {
 		return fmt.Errorf("ListenAndServe: %w", err)
@@ -101,11 +103,29 @@ func (a *api) createJob(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println(n)
 
-	if err := a.distributor.AddTranscodeJob("./assets/" + name[0] + "." + name[len(name)-1]); err != nil {
+	id, err := a.distributor.AddTranscodeJob("./assets/" + name[0] + "." + name[len(name)-1])
+	if err != nil {
 		panic(err)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	var msg struct {
+		Id string `json:"id"`
+	}
+	msg.Id = id
+	w.Header().Set("content-type", "application/json")
+	if err := json.NewEncoder(w).Encode(&msg); err != nil {
+		panic(err)
+	}
+}
+
+func (a *api) result(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	path, err := a.distributor.RetrieveFilePath(id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeFile(w, r, path)
 }
 
 func (a *api) jobStatus(w http.ResponseWriter, r *http.Request) {
