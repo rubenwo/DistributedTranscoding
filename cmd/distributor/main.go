@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	if err := api.Run(&config.Configuration{Addr: ":80"}); err != nil {
+	if err := api.Run(&config.Configuration{ApiAddr: ":80", AltApiAddr: ":81", ClusterAddr: ":8080"}); err != nil {
 		log.Fatal(err)
 	}
 }

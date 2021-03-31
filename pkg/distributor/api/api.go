@@ -24,7 +24,10 @@ type api struct {
 }
 
 func Run(cfg *config.Configuration) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 8080))
+	if err := cfg.Validate(); err != nil{
+		return fmt.Errorf("error validating confiug: ")
+	}
+	lis, err := net.Listen("tcp", cfg.ClusterAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen on port 8080")
 	}
@@ -61,8 +64,8 @@ func Run(cfg *config.Configuration) error {
 
 	router.Get("/results/{id}", a.result)
 
-	log.Printf("Distributor is listening on: %s\n", cfg.Addr)
-	if err := http.ListenAndServe(cfg.Addr, router); err != nil {
+	log.Printf("Distributor is listening on: %s\n", cfg.ApiAddr)
+	if err := http.ListenAndServe(cfg.ApiAddr, router); err != nil {
 		return fmt.Errorf("ListenAndServe: %w", err)
 	}
 	return nil
