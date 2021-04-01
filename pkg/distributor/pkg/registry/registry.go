@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	v1 "github.com/rubenwo/DistributedTranscoding/pkg/api/v1"
+	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/distributor"
 	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/splitter"
 	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/stitcher"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 type Registry struct {
@@ -36,6 +38,49 @@ func NewRegistry() *Registry {
 	go registry.processResults()
 
 	return registry
+}
+
+func (r *Registry) JobIds() []string {
+	var ids []string
+	for k := range r.jobs {
+		ids = append(ids, k)
+	}
+
+	return ids
+}
+
+type EasyProgress struct {
+	currentChunks int
+	maxChunks     int
+}
+
+func (e *EasyProgress) CurrentJobState() (distributor.State, error) {
+	return distributor.Transcoding, nil
+}
+
+func (e *EasyProgress) CurrentChunks() int {
+	return e.currentChunks
+}
+
+func (e *EasyProgress) MaxChunks() int {
+	return e.maxChunks
+}
+
+func (r *Registry) ProgressChannels(ids []string) []chan distributor.Progress {
+	channels := make([]chan distributor.Progress, len(ids))
+	for i, id := range ids {
+		go func(idx int, id string) {
+			for x := 0; x < 100; x++ {
+				channels[idx] <- &EasyProgress{
+					currentChunks: r.results[id],
+					maxChunks:     r.jobs[id],
+				}
+				time.Sleep(time.Second)
+			}
+		}(i, id)
+	}
+
+	return channels
 }
 
 func (r *Registry) RetrieveFile(id string) (string, error) {

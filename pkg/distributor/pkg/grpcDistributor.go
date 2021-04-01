@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	v1 "github.com/rubenwo/DistributedTranscoding/pkg/api/v1"
+	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/distributor"
 	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/registry"
 	"log"
 )
@@ -19,16 +20,15 @@ func NewGrpcDistributor() *GrpcDistributor {
 }
 
 func (d *GrpcDistributor) JobIds() []string {
-	panic("JobIds not implemented")
-	return nil
+	return d.Registry.JobIds()
 }
 func (d *GrpcDistributor) AddTranscodeJob(path string) (string, error) {
 	return d.Registry.AddJob(path)
 }
 
-func (d *GrpcDistributor) TranscodeJobProgress(id string) (<-chan Progress, error) {
-	panic("TranscodeJobProgress not implemented")
-	return nil, nil
+func (d *GrpcDistributor) TranscodeJobProgress(id string) (<-chan distributor.Progress, error) {
+	channels := d.Registry.ProgressChannels([]string{id})
+	return channels[0], nil
 }
 
 func (d *GrpcDistributor) RetrieveFilePath(id string) (string, error) {

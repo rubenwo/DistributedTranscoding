@@ -9,6 +9,7 @@ import (
 	v1 "github.com/rubenwo/DistributedTranscoding/pkg/api/v1"
 	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/api/config"
 	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg"
+	"github.com/rubenwo/DistributedTranscoding/pkg/distributor/pkg/distributor"
 	"google.golang.org/grpc"
 	"io"
 	"log"
@@ -20,7 +21,7 @@ import (
 )
 
 type api struct {
-	distributor pkg.Distributor
+	distributor distributor.Distributor
 }
 
 func Run(cfg *config.Configuration) error {
@@ -148,12 +149,12 @@ func (a *api) streamJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jobIds := a.distributor.JobIds()
-	results := make(chan pkg.Progress, 10)
+	results := make(chan distributor.Progress, 10)
 	for _, id := range jobIds {
-		go func(rc chan<- pkg.Progress) {
+		go func(rc chan<- distributor.Progress) {
 			c, err := a.distributor.TranscodeJobProgress(id)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("could find progress for job: %d", id), http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("could find progress for job: %s", id), http.StatusBadRequest)
 				return
 			}
 			for p := range c {
@@ -165,8 +166,8 @@ func (a *api) streamJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	for r := range results {
 		var msg struct {
-			CurrentJobState pkg.State `json:"state"`
-			Error           string    `json:"error"`
+			CurrentJobState distributor.State `json:"state"`
+			Error           string            `json:"error"`
 		}
 		state, err := r.CurrentJobState()
 		msg.CurrentJobState = state
@@ -182,4 +183,5 @@ func (a *api) streamJobStatus(w http.ResponseWriter, r *http.Request) {
 
 		_ = conn.WriteMessage(websocket.TextMessage, data)
 	}
+	conn.Close()
 }

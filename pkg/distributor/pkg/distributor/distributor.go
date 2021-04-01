@@ -1,4 +1,4 @@
-package pkg
+package distributor
 
 type State uint8
 
@@ -10,6 +10,8 @@ const (
 
 type Progress interface {
 	CurrentJobState() (State, error)
+	CurrentChunks() int
+	MaxChunks() int
 }
 
 type Distributor interface {
