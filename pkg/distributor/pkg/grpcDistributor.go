@@ -11,6 +11,7 @@ import (
 
 type GrpcDistributor struct {
 	Registry *registry.Registry
+	v1.UnimplementedDistributorServiceServer
 }
 
 func NewGrpcDistributor() *GrpcDistributor {
